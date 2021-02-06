@@ -4,9 +4,6 @@ MAINTAINER Caner Aydogan "contact@caner.com"
 EXPOSE 8080
 WORKDIR /usr/local/bin/
 
-#for docker-compose build
-#COPY ./myDictionary-GermanService/target/myDictionary-GermanService-1.0-SNAPSHOT.jar myDictionary-GermanService-1.0-SNAPSHOT.jar
-
 # for docker build
-COPY ./target/GermanService-1.0-SNAPSHOT.jar GermanService-1.0-SNAPSHOT.jar
-ENTRYPOINT ["java", "-jar", "GermanService-1.0-SNAPSHOT.jar"]
+COPY ./target/MyDictionary-0.0.1-SNAPSHOT.jar MyDictionary-0.0.1-SNAPSHOT.jar
+ENTRYPOINT ["java", "-jar", "MyDictionary-0.0.1-SNAPSHOT.jar"]

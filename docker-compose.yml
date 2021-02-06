@@ -1,77 +1,26 @@
 version: '3'
 services:
-#  eureka:
-#    container_name: eureka
-#    image: ceqo/dictionary-eureka:latest
-#    ports:
-#      - "8761:8761"
-#
-#  gateway:
-#    container_name: gateway
-#    image: ceqo/dictionary-gateway:latest
-#    links:
-#      - eureka
-#    ports:
-#      - "8080:8080"
-#    environment:
-#      #overriding spring application.properties
-#      - eureka.client.serviceUrl.defaultZone=http://eureka:8761/eureka/
-#
-#  englishws:
-#    container_name: english-ws
-#    image: ceqo/dictionary-english-ws:latest
-#    links:
-#      - eureka
-#    depends_on:
-#      - postgres
-#    environment:
-#      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/dictionary
-#      - SPRING_DATASOURCE_USERNAME=dictionary
-#      - SPRING_DATASOURCE_PASSWORD=dictionarypass
-#      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
-#      - spring.datasource.url=jdbc:postgresql://postgres:5432/dictionary
-#      - eureka.client.serviceUrl.defaultZone=http://eureka:8761/eureka/
-#      - server.port=8080
-#
-#
-#  germanws:
-#    container_name: german-ws
-#    image: ceqo/dictionary-german-ws:latest
-#    links:
-#      - eureka
-#    depends_on:
-#      - postgres
-#    environment:
-#      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/dictionary
-#      - SPRING_DATASOURCE_USERNAME=dictionary
-#      - SPRING_DATASOURCE_PASSWORD=dictionarypass
-#      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
-#      - spring.datasource.url=jdbc:postgresql://postgres:5432/dictionary
-#      - eureka.client.serviceUrl.defaultZone=http://eureka:8761/eureka/
-#      - server.port=8080
-#
-#  userws:
-#    container_name: user-ws
-#    image: ceqo/dictionary-user-ws:latest
-#    links:
-#      - eureka
-#    depends_on:
-#      - postgres
-#    environment:
-#      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/dictionary
-#      - SPRING_DATASOURCE_USERNAME=dictionary
-#      - SPRING_DATASOURCE_PASSWORD=dictionarypass
-#      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
-#      - spring.datasource.url=jdbc:postgresql://postgres:5432/dictionary
-#      - eureka.client.serviceUrl.defaultZone=http://eureka:8761/eureka/
-#      - server.port=8080
-#
-#
-#  angularapp:
-#    container_name: angular
-#    image: ceqo/dictionary-angular:latest
-#    ports:
-#      - "4200:80/tcp"
+  backend:
+    container_name: myDictionary-monolithic-be
+    image: ceqo/dictionary-monolithic-be:latest
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/dictionary
+      - SPRING_DATASOURCE_USERNAME=dictionary
+      - SPRING_DATASOURCE_PASSWORD=dictionarypass
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+      - server.port=8080
+      - spring.application.name=myDictionary
+
+
+  angularapp:
+    container_name: myDictionary-monolithic-fe
+    image: ceqo/dictionary-monolithic-fe:latest
+    ports:
+      - "4200:80/tcp"
 
   postgres:
     image: 'postgres:13.1-alpine'
