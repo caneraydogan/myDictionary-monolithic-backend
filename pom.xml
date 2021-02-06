@@ -9,9 +9,9 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>MyDictionary</artifactId>
+    <artifactId>myDictionary-monolithic-be</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>MyDictionary</name>
+    <name>myDictionary-monolithic-be</name>
     <description>MyDictionary Application</description>
     <properties>
         <java.version>1.8</java.version>
