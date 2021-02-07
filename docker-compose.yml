@@ -17,8 +17,8 @@ services:
 
 
   angularapp:
-    container_name: myDictionary-monolithic-fe
-    image: ceqo/dictionary-monolithic-fe:latest
+    container_name: myDictionary-monolithic-fe-l
+    image: ceqo/dictionary-monolithic-fe-l:latest
     ports:
       - "4200:80/tcp"
 
