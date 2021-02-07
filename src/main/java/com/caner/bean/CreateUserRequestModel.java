@@ -26,4 +26,7 @@ public class CreateUserRequestModel {
     @Email(message = "Email is not valid")
     @NotNull(message = "Email is mandatory!")
     private String email;
+
+    @NotNull(message = "Please enter your invitation code!")
+    private String invitationCode;
 }

@@ -1,10 +1,13 @@
 package com.caner.service.impl;
 
 import com.caner.bean.*;
+import com.caner.dao.InvitationRepo;
 import com.caner.dao.UserRepo;
 import com.caner.service.UserService;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -17,30 +20,58 @@ import java.util.UUID;
 @Service
 public class UserServiceImpl implements UserService {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
+
+
     private UserRepo userRepo;
+    private InvitationRepo invitationRepo;
     private BCryptPasswordEncoder bCryptPasswordEncoder;
 
     @Autowired
-    public UserServiceImpl(UserRepo userRepo, BCryptPasswordEncoder bCryptPasswordEncoder) {
+    public UserServiceImpl(UserRepo userRepo, InvitationRepo invitationRepo, BCryptPasswordEncoder bCryptPasswordEncoder) {
         this.userRepo = userRepo;
+        this.invitationRepo = invitationRepo;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
     }
 
     @Override
     public Result createUser(CreateUserRequestModel createUserRequestModel) {
-        ModelMapper modelMapper = new ModelMapper();
-        modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
-        UserDto userDto = modelMapper.map(createUserRequestModel, UserDto.class);
+        Result result = isInvitationCodeValid(createUserRequestModel.getInvitationCode());
 
-        userDto.setUserUUId(UUID.randomUUID().toString());
+        if (result.isOk()) {
 
-        modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
+            ModelMapper modelMapper = new ModelMapper();
+            modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
+            UserDto userDto = modelMapper.map(createUserRequestModel, UserDto.class);
 
-        User user = modelMapper.map(userDto, User.class);
-        user.setEncryptedPassword(bCryptPasswordEncoder.encode(userDto.getPassword()));
-        userRepo.save(user);
+            userDto.setUserUUId(UUID.randomUUID().toString());
 
-        return new Result().setStatus(ResultStatus.OK);
+            modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
+
+            User user = modelMapper.map(userDto, User.class);
+            user.setEncryptedPassword(bCryptPasswordEncoder.encode(userDto.getPassword()));
+            userRepo.save(user);
+
+            Invitation invitation = invitationRepo.findByCode(createUserRequestModel.getInvitationCode());
+            invitation.setUsedBy(user);
+            invitationRepo.save(invitation);
+        }
+
+        return result;
+    }
+
+    private Result isInvitationCodeValid(String invitationCode) {
+        Result result = new Result().setStatus(ResultStatus.FAIL);
+
+        Invitation invitation = invitationRepo.findByCode(invitationCode);
+
+        if (invitation == null) {
+            result.setErrorCode("INVALID_INVITATION_CODE");
+        } else if (invitation.getUsedBy() != null) {
+            result.setErrorCode("INVITATION_CODE_ALREADY_USED");
+        }
+
+        return result.getErrorCode() == null ? result.setStatus(ResultStatus.OK) : result;
     }
 
     @Override

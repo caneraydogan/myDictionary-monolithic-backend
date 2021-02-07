@@ -1,11 +1,11 @@
 package com.caner.bean;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.persistence.*;
-import java.util.List;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Table;
 
 @Entity
 @Getter
@@ -29,9 +29,5 @@ public class User extends IdObject {
 
     @Column(nullable = false)
     private String encryptedPassword;
-
-    @JsonManagedReference("user")
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    private List<GermanEntry> entryList;
 
 }
