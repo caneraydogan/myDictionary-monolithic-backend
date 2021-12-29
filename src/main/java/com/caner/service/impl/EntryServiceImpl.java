@@ -1,11 +1,11 @@
 package com.caner.service.impl;
 
 import com.caner.bean.*;
-import com.caner.dao.EnglishEntryRepo;
-import com.caner.dao.EnglishMeaningRepo;
-import com.caner.dao.EnglishUsageRepo;
+import com.caner.dao.EntryRepo;
+import com.caner.dao.MeaningRepo;
+import com.caner.dao.UsageRepo;
 import com.caner.dao.UserRepo;
-import com.caner.service.EnglishEntryService;
+import com.caner.service.EntryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -16,15 +16,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class EnglishEntryServiceImpl implements EnglishEntryService {
+public class EntryServiceImpl implements EntryService {
 
-    private EnglishEntryRepo entryRepo;
-    private EnglishUsageRepo usageRepo;
-    private EnglishMeaningRepo meaningRepo;
+    private EntryRepo entryRepo;
+    private UsageRepo usageRepo;
+    private MeaningRepo meaningRepo;
     private UserRepo userRepo;
 
     @Autowired
-    public EnglishEntryServiceImpl(EnglishEntryRepo entryRepo, EnglishUsageRepo usageRepo, EnglishMeaningRepo meaningRepo, UserRepo userRepo) {
+    public EntryServiceImpl(EntryRepo entryRepo, UsageRepo usageRepo, MeaningRepo meaningRepo, UserRepo userRepo) {
         this.entryRepo = entryRepo;
         this.usageRepo = usageRepo;
         this.meaningRepo = meaningRepo;
@@ -32,16 +32,16 @@ public class EnglishEntryServiceImpl implements EnglishEntryService {
     }
 
     @Override
-    public ResultBean<EnglishEntry> findEntry(Long entryId) {
+    public ResultBean<Entry> findEntry(Long entryId) {
 
-        ResultBean<EnglishEntry> result = new ResultBean<>(ResultStatus.OK);
+        ResultBean<Entry> result = new ResultBean<>(ResultStatus.OK);
 
-        EnglishEntry entry = entryRepo.findEntryById(entryId);
+        Entry entry = entryRepo.findEntryById(entryId);
 
         if (entry == null) {
             result.setStatus(ResultStatus.FAIL).setErrorCode("ENTRY_NOT_FOUND");
         } else {
-            List<EnglishUsage> usageList = usageRepo.findByEntry(entry);
+            List<Usage> usageList = usageRepo.findByEntry(entry);
             entry.setUsageList(usageList);
             result.setData(entry);
         }
@@ -55,12 +55,12 @@ public class EnglishEntryServiceImpl implements EnglishEntryService {
         return new Result().setStatus(ResultStatus.OK);
     }
 
-    public ResultBean<List<EnglishEntry>> findAll(String userUUId, Boolean donePracticing) {
-        ResultBean<List<EnglishEntry>> resultBean = new ResultBean<>();
-        List<EnglishEntry> entriesWithMeaningList = entryRepo.findAllByUserUUIdWithMeaningList(userUUId, donePracticing);
+    public ResultBean<List<Entry>> findAll(String userUUId, Boolean donePracticing) {
+        ResultBean<List<Entry>> resultBean = new ResultBean<>();
+        List<Entry> entriesWithMeaningList = entryRepo.findAllByUserUUIdWithMeaningList(userUUId, donePracticing);
 
-        for (EnglishEntry entry : entriesWithMeaningList) {
-            List<EnglishUsage> usageList = usageRepo.findByEntry(entry);
+        for (Entry entry : entriesWithMeaningList) {
+            List<Usage> usageList = usageRepo.findByEntry(entry);
             entry.setUsageList(usageList);
         }
         resultBean.setData(entriesWithMeaningList);
@@ -68,7 +68,7 @@ public class EnglishEntryServiceImpl implements EnglishEntryService {
     }
 
     @Override
-    public Result saveEntry(EnglishEntryDTO entryDTO) {
+    public Result saveEntry(EntryDTO entryDTO) {
         Result result = validateEntry(entryDTO);
 
         if (result.isOk()) {
@@ -78,25 +78,26 @@ public class EnglishEntryServiceImpl implements EnglishEntryService {
                 return result.setStatus(ResultStatus.FAIL).setMessage("INVALID_USER");
             }
 
-            EnglishEntry entry = new EnglishEntry();
+            Entry entry = new Entry();
             entry.setUser(user);
             entry.setWord(entryDTO.getWord());
+            entry.setArtikel(entryDTO.getArtikel());
             entry.setDonePracticing(entryDTO.isDonePracticing());
             entry.setRandomOrder(0L);
             entryRepo.save(entry);
 
-            for (EnglishMeaning meaning : entryDTO.getMeaningList()) {
+            for (Meaning meaning : entryDTO.getMeaningList()) {
                 if (!ObjectUtils.isEmpty(meaning.getValue())) {
-                    EnglishMeaning meaning1 = new EnglishMeaning();
+                    Meaning meaning1 = new Meaning();
                     meaning1.setEntry(entry);
                     meaning1.setValue(meaning.getValue());
                     meaningRepo.save(meaning1);
                 }
             }
 
-            for (EnglishUsage usage : entryDTO.getUsageList()) {
+            for (Usage usage : entryDTO.getUsageList()) {
                 if (!ObjectUtils.isEmpty(usage.getValue())) {
-                    EnglishUsage usage1 = new EnglishUsage();
+                    Usage usage1 = new Usage();
                     usage1.setEntry(entry);
                     usage1.setValue(usage.getValue());
                     usageRepo.save(usage1);
@@ -108,19 +109,20 @@ public class EnglishEntryServiceImpl implements EnglishEntryService {
     }
 
     @Override
-    public Result updateEntry(EnglishEntryDTO entryDTO) {
+    public Result updateEntry(EntryDTO entryDTO) {
         Result result = validateEntry(entryDTO);
 
         if (result.isOk()) {
-            EnglishEntry entry = entryRepo.findEntryById(entryDTO.getId());
-            entry.setDonePracticing(entryDTO.isDonePracticing());
+            Entry entry = entryRepo.findEntryById(entryDTO.getId());
             entry.setWord(entryDTO.getWord());
-            entryRepo.save(entry);
+            entry.setArtikel(entryDTO.getArtikel());
+            entry.setDonePracticing(entryDTO.isDonePracticing());
+            entryRepo.saveAndFlush(entry);
 
-            List<EnglishMeaning> toBeDeletedMeanings = new ArrayList<>();
-            for (EnglishMeaning meaningDB : entry.getMeaningList()) {
+            List<Meaning> toBeDeletedMeanings = new ArrayList<>();
+            for (Meaning meaningDB : entry.getMeaningList()) {
                 boolean shouldMeaningBeDeleted = true;
-                for (EnglishMeaning meaningDTO : entryDTO.getMeaningList()) {
+                for (Meaning meaningDTO : entryDTO.getMeaningList()) {
                     if (meaningDB.getId() == meaningDTO.getId()) {
                         meaningDB.setValue(meaningDTO.getValue());
                         shouldMeaningBeDeleted = false;
@@ -133,20 +135,19 @@ public class EnglishEntryServiceImpl implements EnglishEntryService {
                 }
             }
 
-
-            for (EnglishMeaning meaning : entryDTO.getMeaningList()) {
+            for (Meaning meaning : entryDTO.getMeaningList()) {
                 if (meaning.getId() == null) {
-                    EnglishMeaning meaning1 = new EnglishMeaning();
+                    Meaning meaning1 = new Meaning();
                     meaning1.setEntry(entry);
                     meaning1.setValue(meaning.getValue());
                     meaningRepo.save(meaning1);
                 }
             }
 
-            List<EnglishUsage> toBeDeletedUsages = new ArrayList<>();
-            for (EnglishUsage usageDB : entry.getUsageList()) {
+            List<Usage> toBeDeletedUsages = new ArrayList<>();
+            for (Usage usageDB : entry.getUsageList()) {
                 boolean shouldUsageBeDeleted = true;
-                for (EnglishUsage usageDTO : entryDTO.getUsageList()) {
+                for (Usage usageDTO : entryDTO.getUsageList()) {
                     if (usageDB.getId() == usageDTO.getId()) {
                         usageDB.setValue(usageDTO.getValue());
                         shouldUsageBeDeleted = false;
@@ -159,9 +160,9 @@ public class EnglishEntryServiceImpl implements EnglishEntryService {
                 }
             }
 
-            for (EnglishUsage usage : entryDTO.getUsageList()) {
+            for (Usage usage : entryDTO.getUsageList()) {
                 if (usage.getId() == null) {
-                    EnglishUsage usage1 = new EnglishUsage();
+                    Usage usage1 = new Usage();
                     usage1.setEntry(entry);
                     usage1.setValue(usage.getValue());
                     usageRepo.save(usage1);
@@ -175,7 +176,8 @@ public class EnglishEntryServiceImpl implements EnglishEntryService {
         return result;
     }
 
-    public Result validateEntry(EnglishEntryDTO entryDTO) {
+    public Result validateEntry(EntryDTO entryDTO) {
+
         Result result = new Result().setStatus(ResultStatus.FAIL);
 
         if (entryDTO.getUserUUId() == null) {
@@ -184,8 +186,10 @@ public class EnglishEntryServiceImpl implements EnglishEntryService {
             result.setErrorCode("MISSING_WORD");
         } else if (entryDTO.getMeaningList().isEmpty()) {
             result.setErrorCode("MISSING_MEANING");
+        } else if (entryDTO.getArtikel() != null && !Artikel.isValid(entryDTO.getArtikel().toUpperCase())) {
+            result.setErrorCode("WRONG_ARTIKEL");
         } else {
-            EnglishEntry entry = entryRepo.findEntryByWord(entryDTO.getWord());
+            Entry entry = entryRepo.findEntryByWord(entryDTO.getWord());
             if (entry != null && entry.getId() != entryDTO.getId()) {
                 result.setErrorCode("WORD_ALREADY_EXISTS");
             }
@@ -195,8 +199,8 @@ public class EnglishEntryServiceImpl implements EnglishEntryService {
     }
 
 
-    public ResultBean<EnglishEntry> findRandomEntry(String userUUId, Boolean donePracticing) {
-        ResultBean<EnglishEntry> result = new ResultBean<>(ResultStatus.OK);
+    public ResultBean<Entry> findRandomEntry(String userUUId, Boolean donePracticing) {
+        ResultBean<Entry> result = new ResultBean<>(ResultStatus.OK);
 
         long randomOrderSeqValue = entryRepo.findRandomOrderSeqValue();
         long minRandomOrderValue;
@@ -217,16 +221,16 @@ public class EnglishEntryServiceImpl implements EnglishEntryService {
             selectedRandomOrderValue = minRandomOrderValue + (long) (Math.random() * ((10)));
         }
 
-        List<EnglishEntry> entries = entryRepo.findByRandomOrder(userUUId, selectedRandomOrderValue);
+        List<Entry> entries = entryRepo.findByRandomOrder(userUUId, selectedRandomOrderValue);
         if (CollectionUtils.isEmpty(entries)) {
             entries = entryRepo.findByRandomOrderLimit(userUUId, minRandomOrderValue, selectedRandomOrderValue, donePracticing);
         }
-        EnglishEntry entry = entries.get(entries.size() / 2);
+        Entry entry = entries.get(entries.size() / 2);
 
         entry.setRandomOrder(randomOrderSeqValue);
         entryRepo.save(entry);
 
-        List<EnglishUsage> usageList = usageRepo.findByEntry(entry);
+        List<Usage> usageList = usageRepo.findByEntry(entry);
         entry.setUsageList(usageList);
 
         return result.setData(entry);
@@ -239,14 +243,15 @@ public class EnglishEntryServiceImpl implements EnglishEntryService {
         return new Result().setStatus(ResultStatus.OK);
     }
 
-    @Override
-    public ResultBean<List<EnglishEntry>> findEntryByWord(String userUUId, String word) {
-        ResultBean<List<EnglishEntry>> resultBean = new ResultBean<>();
-        if (!ObjectUtils.isEmpty(word) && !ObjectUtils.isEmpty(word.trim())) {
-            List<EnglishEntry> entriesWithMeaningList = entryRepo.findEntryByUserUUIdAndWordLike(userUUId, word.toUpperCase());
 
-            for (EnglishEntry entry : entriesWithMeaningList) {
-                List<EnglishUsage> usageList = usageRepo.findByEntry(entry);
+    @Override
+    public ResultBean<List<Entry>> findEntryByWord(String userUUId, String word) {
+        ResultBean<List<Entry>> resultBean = new ResultBean<>();
+        if (!ObjectUtils.isEmpty(word) && !ObjectUtils.isEmpty(word.trim())) {
+            List<Entry> entriesWithMeaningList = entryRepo.findEntryByUserUUIdAndWordLike(userUUId, word.toUpperCase());
+
+            for (Entry entry : entriesWithMeaningList) {
+                List<Usage> usageList = usageRepo.findByEntry(entry);
                 entry.setUsageList(usageList);
             }
             resultBean.setData(entriesWithMeaningList);

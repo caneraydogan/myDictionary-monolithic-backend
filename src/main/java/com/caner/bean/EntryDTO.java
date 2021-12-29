@@ -7,11 +7,13 @@ import java.util.List;
 
 @Getter
 @Setter
-public class EnglishEntryDTO {
+public class EntryDTO {
+
     private long id;
     private String word;
     private boolean donePracticing;
     private String userUUId;
-    private List<EnglishMeaning> meaningList;
-    private List<EnglishUsage> usageList;
+    private List<Meaning> meaningList;
+    private List<Usage> usageList;
+    private String artikel;
 }

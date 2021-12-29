@@ -12,7 +12,7 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-public class GermanEntry extends CommonEntryAttributes implements Serializable {
+public class Entry extends CommonEntryAttributes implements Serializable {
 
     @Column(length = 3)
     private String artikel;
@@ -24,10 +24,10 @@ public class GermanEntry extends CommonEntryAttributes implements Serializable {
 
     @JsonManagedReference("entry")
     @OneToMany(mappedBy = "entry", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private List<GermanMeaning> meaningList;
+    private List<Meaning> meaningList;
 
     @JsonManagedReference("entry")
     @OneToMany(mappedBy = "entry", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private List<GermanUsage> usageList;
+    private List<Usage> usageList;
 
 }
