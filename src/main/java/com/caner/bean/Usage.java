@@ -15,12 +15,12 @@ import java.io.Serializable;
 @Getter
 @Setter
 @ToString
-public class GermanUsage extends IdObject implements Serializable {
+public class Usage extends IdObject implements Serializable {
 
     @JsonBackReference("entry")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ENTRY_ID")
-    private GermanEntry entry;
+    private Entry entry;
 
     private String value;
 }
