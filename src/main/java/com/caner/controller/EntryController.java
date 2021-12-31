@@ -18,14 +18,14 @@ public class EntryController {
     }
 
     @GetMapping
-    @RequestMapping(value = "/findEntry/{id}")
-    public ResultBean<Entry> findEntry(@PathVariable("id") Long entryId) {
-        return entryService.findEntry(entryId);
+    @RequestMapping(value = "/findEntry/{userUUId}/{word}/{donePracticing}")
+    public ResultBean<Entry> findEntry(@PathVariable String userUUId, @PathVariable String word, @PathVariable boolean donePracticing) {
+        return entryService.findEntry(userUUId, word, donePracticing);
     }
 
     @GetMapping
     @RequestMapping(value = "/findEntryByWord/{userUUId}/{word}")
-    public ResultBean<List<Entry>> findEntryByWord(@PathVariable String userUUId, @PathVariable("word") String word) {
+    public ResultBean<List<Entry>> findEntryByWord(@PathVariable String userUUId, @PathVariable String word) {
         return entryService.findEntryByWord(userUUId, word);
     }
 
@@ -37,13 +37,13 @@ public class EntryController {
 
     @GetMapping
     @RequestMapping(value = "/findRandomEntry/{userUUId}/{donePracticing}")
-    public ResultBean<Entry> findRandomEntry(@PathVariable String userUUId, @PathVariable("donePracticing") boolean donePracticing) {
+    public ResultBean<Entry> findRandomEntry(@PathVariable String userUUId, @PathVariable boolean donePracticing) {
         return entryService.findRandomEntry(userUUId, donePracticing);
     }
 
     @GetMapping
     @RequestMapping(value = "/findAll/{userUUId}/{donePracticing}")
-    public ResultBean<List<Entry>> findAll(@PathVariable String userUUId, @PathVariable("donePracticing") boolean donePracticing) {
+    public ResultBean<List<Entry>> findAll(@PathVariable String userUUId, @PathVariable boolean donePracticing) {
         return entryService.findAll(userUUId, donePracticing);
     }
 
@@ -60,8 +60,8 @@ public class EntryController {
     }
 
     @PostMapping
-    @RequestMapping(value = "/updatePractice/{entryId}/{donePracticing}")
-    public Result updatePractice(@PathVariable("entryId") Long entryId, @PathVariable("donePracticing") boolean donePracticing) {
-        return entryService.updatePractice(entryId, donePracticing);
+    @RequestMapping(value = "/updatePractice/{practiceValue}")
+    public Result updatePractice(@PathVariable boolean practiceValue, @RequestBody EntryDTO entryDTO) {
+        return entryService.updatePractice(entryDTO, practiceValue);
     }
 }

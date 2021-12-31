@@ -5,7 +5,7 @@ import com.caner.bean.*;
 import java.util.List;
 
 public interface EntryService {
-    ResultBean<Entry> findEntry(Long entryId);
+    ResultBean<Entry> findEntry(String userUUId, String word, Boolean donePracticing);
 
     Result deleteEntry(Long entryId);
 
@@ -17,7 +17,7 @@ public interface EntryService {
 
     ResultBean<Entry> findRandomEntry(String userUUId, Boolean donePracticing);
 
-    Result updatePractice(Long entryId, Boolean practiceValue);
+    Result updatePractice(EntryDTO entryDTO, Boolean practiceValue);
 
     ResultBean<List<Entry>> findEntryByWord(String userUUId, String word);
 
