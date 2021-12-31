@@ -17,11 +17,6 @@ public interface EntryRepo extends JpaRepository<Entry, Long> {
             "        where upper(e.word) = upper(:word)")
     Entry findEntryByWord(String word);
 
-    @Query(value = "select e" +
-            "         from Entry e " +
-            "        where e.user.userUUId = :userUUId" +
-            "          and upper(e.word) like %:word%")
-    List<Entry> findEntryByUserUUIdAndWordLike(String userUUId, String word);
 
     @Query(value = "select distinct e" +
             "         from Entry e " +
@@ -29,29 +24,6 @@ public interface EntryRepo extends JpaRepository<Entry, Long> {
             "        where e.user.userUUId = :userUUId" +
             "          and e.donePracticing = :donePracticing")
     List<Entry> findAllByUserUUIdWithMeaningList(String userUUId, boolean donePracticing);
-
-    @Query(value = "select e" +
-            "         from Entry e" +
-            "        where e.randomOrder = :randomOrder" +
-            "          and e.user.userUUId = :userUUId")
-    List<Entry> findByRandomOrder(String userUUId, long randomOrder);
-
-    @Query(value = "select e" +
-            "         from Entry e " +
-            "        where e.randomOrder between :min and :max" +
-            "          and e.user.userUUId = :userUUId" +
-            "          and e.donePracticing = :donePracticing")
-    List<Entry> findByRandomOrderLimit(String userUUId, long min, long max, boolean donePracticing);
-
-    @Query(value = "select min(e.randomOrder)" +
-            "         from Entry e" +
-            "        where e.user.userUUId = :userUUId" +
-            "          and e.donePracticing = :donePracticing")
-    long findMinimumRandomOrderEntry(String userUUId, boolean donePracticing);
-
-    @Query(value = "SELECT nextval('random_order_seq')"
-            , nativeQuery = true)
-    Long findRandomOrderSeqValue();
 
     @Modifying
     @Query(" update Entry e " +

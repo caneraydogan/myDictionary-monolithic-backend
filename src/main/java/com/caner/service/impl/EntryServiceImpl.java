@@ -8,20 +8,30 @@ import com.caner.dao.UserRepo;
 import com.caner.service.EntryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 
 import javax.transaction.Transactional;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class EntryServiceImpl implements EntryService {
+
+    private static final boolean stillPractising = false;
+    private static final boolean donePractising = true;
 
     private EntryRepo entryRepo;
     private UsageRepo usageRepo;
     private MeaningRepo meaningRepo;
     private UserRepo userRepo;
+
+    // UserUUID -> false=stillPractising/true=donePractising -> EntryList
+    private static final HashMap<String, HashMap<Boolean, HashMap<String, Entry>>> entryMap = new HashMap<>();
+    private static final HashMap<String, HashMap<Boolean, List<Entry>>> practiceMap = new HashMap<>();
 
     @Autowired
     public EntryServiceImpl(EntryRepo entryRepo, UsageRepo usageRepo, MeaningRepo meaningRepo, UserRepo userRepo) {
@@ -32,17 +42,15 @@ public class EntryServiceImpl implements EntryService {
     }
 
     @Override
-    public ResultBean<Entry> findEntry(Long entryId) {
-
+    public ResultBean<Entry> findEntry(String userUUId, String word, Boolean donePracticing) {
         ResultBean<Entry> result = new ResultBean<>(ResultStatus.OK);
 
-        Entry entry = entryRepo.findEntryById(entryId);
+        initializeStaticEntryMapForUser(userUUId);
+        Entry entry = entryMap.get(userUUId).get(donePracticing).get(word);
 
         if (entry == null) {
             result.setStatus(ResultStatus.FAIL).setErrorCode("ENTRY_NOT_FOUND");
         } else {
-            List<Usage> usageList = usageRepo.findByEntry(entry);
-            entry.setUsageList(usageList);
             result.setData(entry);
         }
 
@@ -51,20 +59,71 @@ public class EntryServiceImpl implements EntryService {
 
     @Override
     public Result deleteEntry(Long entryId) {
+        Entry entry = entryRepo.findEntryById(entryId);
+        removeEntryFromMap(entry);
+
         entryRepo.deleteById(entryId);
         return new Result().setStatus(ResultStatus.OK);
     }
 
+    private void removeEntryFromMap(Entry entry) {
+        entryMap.get(entry.getUser().getUserUUId()).get(entry.isDonePracticing()).remove(entry.getWord());
+    }
+
     public ResultBean<List<Entry>> findAll(String userUUId, Boolean donePracticing) {
-        ResultBean<List<Entry>> resultBean = new ResultBean<>();
+        initializeStaticEntryMapForUser(userUUId);
+        List<Entry> entryList = new ArrayList<>(entryMap.get(userUUId).get(donePracticing).values());
+
+        return new ResultBean<>(entryList);
+    }
+
+    public void initializeStaticEntryMapForUser(String userUUId) {
+        if (!isUserAlreadyInitializedForEntryMap(userUUId)) {
+            entryMap.put(userUUId, new HashMap<>());
+            entryMap.get(userUUId).put(donePractising, new HashMap<>());
+            entryMap.get(userUUId).put(stillPractising, new HashMap<>());
+
+            List<Entry> entryList = getAllByUUIDandPractising(userUUId, donePractising);
+            entryList.forEach(entry -> entryMap.get(userUUId).get(donePractising).put(entry.getWord(), entry));
+
+            entryList = getAllByUUIDandPractising(userUUId, stillPractising);
+            entryList.forEach(entry -> entryMap.get(userUUId).get(stillPractising).put(entry.getWord(), entry));
+        }
+    }
+
+    public void initializeStaticPracticeMapForUser(String userUUId) {
+        if (!isUserAlreadyInitializedForPracticeMap(userUUId)) {
+            practiceMap.put(userUUId, new HashMap<>());
+            practiceMap.get(userUUId).put(donePractising, new ArrayList<>());
+            practiceMap.get(userUUId).put(stillPractising, new ArrayList<>());
+
+            List<Entry> entryList = getAllByUUIDandPractising(userUUId, donePractising);
+            Collections.shuffle(entryList);
+            entryList.forEach(entry -> practiceMap.get(userUUId).get(donePractising).add(entry));
+
+
+            entryList = getAllByUUIDandPractising(userUUId, stillPractising);
+            Collections.shuffle(entryList);
+            entryList.forEach(entry -> practiceMap.get(userUUId).get(stillPractising).add(entry));
+        }
+    }
+
+    private boolean isUserAlreadyInitializedForEntryMap(String userUUId) {
+        return entryMap.get(userUUId) != null;
+    }
+
+    private boolean isUserAlreadyInitializedForPracticeMap(String userUUId) {
+        return practiceMap.get(userUUId) != null;
+    }
+
+    private List<Entry> getAllByUUIDandPractising(String userUUId, Boolean donePracticing) {
         List<Entry> entriesWithMeaningList = entryRepo.findAllByUserUUIdWithMeaningList(userUUId, donePracticing);
 
         for (Entry entry : entriesWithMeaningList) {
             List<Usage> usageList = usageRepo.findByEntry(entry);
             entry.setUsageList(usageList);
         }
-        resultBean.setData(entriesWithMeaningList);
-        return resultBean;
+        return entriesWithMeaningList;
     }
 
     @Override
@@ -83,27 +142,31 @@ public class EntryServiceImpl implements EntryService {
             entry.setWord(entryDTO.getWord());
             entry.setArtikel(entryDTO.getArtikel());
             entry.setDonePracticing(entryDTO.isDonePracticing());
-            entry.setRandomOrder(0L);
             entryRepo.save(entry);
 
+            List<Meaning> meanings = new ArrayList<>();
             for (Meaning meaning : entryDTO.getMeaningList()) {
                 if (!ObjectUtils.isEmpty(meaning.getValue())) {
-                    Meaning meaning1 = new Meaning();
-                    meaning1.setEntry(entry);
-                    meaning1.setValue(meaning.getValue());
-                    meaningRepo.save(meaning1);
+                    Meaning meaningToBeSaved = new Meaning();
+                    meaningToBeSaved.setEntry(entry);
+                    meaningToBeSaved.setValue(meaning.getValue());
+                    meaningRepo.save(meaningToBeSaved);
+                    meanings.add(meaningToBeSaved);
                 }
             }
 
+            List<Usage> usages = new ArrayList<>();
             for (Usage usage : entryDTO.getUsageList()) {
                 if (!ObjectUtils.isEmpty(usage.getValue())) {
-                    Usage usage1 = new Usage();
-                    usage1.setEntry(entry);
-                    usage1.setValue(usage.getValue());
-                    usageRepo.save(usage1);
+                    Usage usageToBeSaved = new Usage();
+                    usageToBeSaved.setEntry(entry);
+                    usageToBeSaved.setValue(usage.getValue());
+                    usageRepo.save(usageToBeSaved);
+                    usages.add(usageToBeSaved);
                 }
             }
 
+            synchronizeMapForUser(entryDTO, entry, meanings, usages);
         }
         return result;
     }
@@ -119,6 +182,10 @@ public class EntryServiceImpl implements EntryService {
             entry.setDonePracticing(entryDTO.isDonePracticing());
             entryRepo.saveAndFlush(entry);
 
+
+            List<Meaning> meanings = new ArrayList<>();
+            List<Usage> usages = new ArrayList<>();
+
             List<Meaning> toBeDeletedMeanings = new ArrayList<>();
             for (Meaning meaningDB : entry.getMeaningList()) {
                 boolean shouldMeaningBeDeleted = true;
@@ -127,6 +194,7 @@ public class EntryServiceImpl implements EntryService {
                         meaningDB.setValue(meaningDTO.getValue());
                         shouldMeaningBeDeleted = false;
                         meaningRepo.save(meaningDB);
+                        meanings.add(meaningDB);
                         break;
                     }
                 }
@@ -137,10 +205,11 @@ public class EntryServiceImpl implements EntryService {
 
             for (Meaning meaning : entryDTO.getMeaningList()) {
                 if (meaning.getId() == null) {
-                    Meaning meaning1 = new Meaning();
-                    meaning1.setEntry(entry);
-                    meaning1.setValue(meaning.getValue());
-                    meaningRepo.save(meaning1);
+                    Meaning meaningToBeSaved = new Meaning();
+                    meaningToBeSaved.setEntry(entry);
+                    meaningToBeSaved.setValue(meaning.getValue());
+                    meaningRepo.save(meaningToBeSaved);
+                    meanings.add(meaningToBeSaved);
                 }
             }
 
@@ -152,6 +221,7 @@ public class EntryServiceImpl implements EntryService {
                         usageDB.setValue(usageDTO.getValue());
                         shouldUsageBeDeleted = false;
                         usageRepo.save(usageDB);
+                        usages.add(usageDB);
                         break;
                     }
                 }
@@ -162,18 +232,34 @@ public class EntryServiceImpl implements EntryService {
 
             for (Usage usage : entryDTO.getUsageList()) {
                 if (usage.getId() == null) {
-                    Usage usage1 = new Usage();
-                    usage1.setEntry(entry);
-                    usage1.setValue(usage.getValue());
-                    usageRepo.save(usage1);
+                    Usage usageToBeSaved = new Usage();
+                    usageToBeSaved.setEntry(entry);
+                    usageToBeSaved.setValue(usage.getValue());
+                    usageRepo.save(usageToBeSaved);
+                    usages.add(usageToBeSaved);
                 }
             }
 
             meaningRepo.deleteInBatch(toBeDeletedMeanings);
             usageRepo.deleteInBatch(toBeDeletedUsages);
 
+            insertIntoMap(entryDTO, entry, meanings, usages);
         }
         return result;
+    }
+
+    private void synchronizeMapForUser(EntryDTO entryDTO, Entry entry, List<Meaning> meanings, List<Usage> usages) {
+        if (isUserAlreadyInitializedForEntryMap(entryDTO.getUserUUId())) {
+            insertIntoMap(entryDTO, entry, meanings, usages);
+        } else {
+            initializeStaticEntryMapForUser(entryDTO.getUserUUId());
+        }
+    }
+
+    private void insertIntoMap(EntryDTO entryDTO, Entry entry, List<Meaning> meanings, List<Usage> usages) {
+        entry.setMeaningList(meanings);
+        entry.setUsageList(usages);
+        entryMap.get(entryDTO.getUserUUId()).get(entryDTO.isDonePracticing()).put(entryDTO.getWord(), entry);
     }
 
     public Result validateEntry(EntryDTO entryDTO) {
@@ -199,47 +285,40 @@ public class EntryServiceImpl implements EntryService {
     }
 
 
-    public ResultBean<Entry> findRandomEntry(String userUUId, Boolean donePracticing) {
+    public ResultBean<Entry> findRandomEntry(String userUUId, Boolean donePractising) {
         ResultBean<Entry> result = new ResultBean<>(ResultStatus.OK);
 
-        long randomOrderSeqValue = entryRepo.findRandomOrderSeqValue();
-        long minRandomOrderValue;
-        try {
-            minRandomOrderValue = entryRepo.findMinimumRandomOrderEntry(userUUId, donePracticing);
-        } catch (Exception e) {
+        initializeStaticPracticeMapForUser(userUUId);
+
+        int listSize = practiceMap.get(userUUId).get(donePractising).size();
+
+        if (listSize == 0) {
+            List<Entry> entryList = getAllByUUIDandPractising(userUUId, donePractising);
+            Collections.shuffle(entryList);
+            entryList.forEach(entry -> practiceMap.get(userUUId).get(donePractising).add(entry));
+        }
+
+        listSize = practiceMap.get(userUUId).get(donePractising).size();
+        if (listSize == 0) {
             return result.setResultCodeAndMessage(ResultStatus.FAIL, "NO_ENTRY_FOUND");
         }
-        long selectedRandomOrderValue = 0l;
 
-        if (randomOrderSeqValue % 10 == 0) {
-            selectedRandomOrderValue = minRandomOrderValue + (long) (Math.random() * (randomOrderSeqValue - minRandomOrderValue));
-        } else if (randomOrderSeqValue % 5 == 0) {
-            selectedRandomOrderValue = minRandomOrderValue + (long) (Math.random() * ((randomOrderSeqValue - minRandomOrderValue) / 3));
-        } else if (randomOrderSeqValue % 3 == 0) {
-            selectedRandomOrderValue = minRandomOrderValue + (long) (Math.random() * ((randomOrderSeqValue - minRandomOrderValue) / 5));
-        } else {
-            selectedRandomOrderValue = minRandomOrderValue + (long) (Math.random() * ((10)));
-        }
-
-        List<Entry> entries = entryRepo.findByRandomOrder(userUUId, selectedRandomOrderValue);
-        if (CollectionUtils.isEmpty(entries)) {
-            entries = entryRepo.findByRandomOrderLimit(userUUId, minRandomOrderValue, selectedRandomOrderValue, donePracticing);
-        }
-        Entry entry = entries.get(entries.size() / 2);
-
-        entry.setRandomOrder(randomOrderSeqValue);
-        entryRepo.save(entry);
-
-        List<Usage> usageList = usageRepo.findByEntry(entry);
-        entry.setUsageList(usageList);
+        Entry entry = practiceMap.get(userUUId).get(donePractising).get(listSize - 1);
+        practiceMap.get(userUUId).get(donePractising).remove(entry);
 
         return result.setData(entry);
     }
 
     @Transactional
     @Override
-    public Result updatePractice(Long entryId, Boolean donePracticing) {
-        entryRepo.updateDonePracticing(entryId, donePracticing);
+    public Result updatePractice(EntryDTO entryDTO, Boolean practiceValue) {
+        entryRepo.updateDonePracticing(entryDTO.getId(), practiceValue);
+
+        Entry entry = entryMap.get(entryDTO.getUserUUId()).get(entryDTO.isDonePracticing()).get(entryDTO.getWord());
+
+        entryMap.get(entryDTO.getUserUUId()).get(!practiceValue).remove(entryDTO.getWord());
+        entryMap.get(entryDTO.getUserUUId()).get(practiceValue).put(entry.getWord(), entry);
+
         return new Result().setStatus(ResultStatus.OK);
     }
 
@@ -247,14 +326,20 @@ public class EntryServiceImpl implements EntryService {
     @Override
     public ResultBean<List<Entry>> findEntryByWord(String userUUId, String word) {
         ResultBean<List<Entry>> resultBean = new ResultBean<>();
-        if (!ObjectUtils.isEmpty(word) && !ObjectUtils.isEmpty(word.trim())) {
-            List<Entry> entriesWithMeaningList = entryRepo.findEntryByUserUUIdAndWordLike(userUUId, word.toUpperCase());
 
-            for (Entry entry : entriesWithMeaningList) {
-                List<Usage> usageList = usageRepo.findByEntry(entry);
-                entry.setUsageList(usageList);
-            }
-            resultBean.setData(entriesWithMeaningList);
+        if (!ObjectUtils.isEmpty(word) && !ObjectUtils.isEmpty(word.trim())) {
+
+            List<Entry> entryList = entryMap.get(userUUId).get(stillPractising).values()
+                    .stream()
+                    .filter(entry -> entry.getWord().toLowerCase().contains(word.toLowerCase()))
+                    .collect(Collectors.toList());
+
+            entryList.addAll(entryMap.get(userUUId).get(donePractising).values()
+                    .stream()
+                    .filter(entry -> entry.getWord().toLowerCase().contains(word.toLowerCase()))
+                    .collect(Collectors.toList()));
+
+            resultBean.setData(entryList);
         } else {
             resultBean.setErrorCode("INVALID WORD!");
         }

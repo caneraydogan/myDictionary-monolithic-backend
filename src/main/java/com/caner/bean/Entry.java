@@ -12,7 +12,10 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-public class Entry extends CommonEntryAttributes implements Serializable {
+public class Entry extends IdObject implements Serializable {
+
+    @Column(length = 32)
+    private String word;
 
     @Column(length = 3)
     private String artikel;
@@ -21,6 +24,8 @@ public class Entry extends CommonEntryAttributes implements Serializable {
     @JsonBackReference("user")
     @ManyToOne(fetch = FetchType.LAZY)
     private User user;
+
+    private boolean donePracticing;
 
     @JsonManagedReference("entry")
     @OneToMany(mappedBy = "entry", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
