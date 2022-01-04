@@ -12,4 +12,12 @@ Create tables
 Run the application
 
 
+#Build and push docker image:
+
+docker build -t ceqo/dictionary-monolithic-be .
+
+docker push ceqo/dictionary-monolithic-be
+
+
+##Frontend
 
