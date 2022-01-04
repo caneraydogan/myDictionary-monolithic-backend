@@ -7,6 +7,6 @@ create table invitation (id  bigserial not null, code varchar(255), user_id int8
 alter table users add constraint UK_6dotkott2kjsp8vw4d0m25fb7 unique (email);
 alter table users add constraint UK_4mcg6l0va97nbd8o9tqpeg104 unique (user_uuid);
 alter table entry add constraint FK57rvhhy82ihqelx9whpa5m5ch foreign key (user_id) references users;
-alter table meaning add constraint FKbwl46eip43ub0ktd9en5uuyyd foreign key (entry_id) references german_entry;
-alter table usage add constraint FK97olr14w28uaucttv12jswf0j foreign key (entry_id) references german_entry;
+alter table meaning add constraint FKbwl46eip43ub0ktd9en5uuyyd foreign key (entry_id) references entry;
+alter table usage add constraint FK97olr14w28uaucttv12jswf0j foreign key (entry_id) references entry;
 alter table invitation add constraint FKs81mf5o97gfb55r5vbov80r5m foreign key (user_id) references users;
