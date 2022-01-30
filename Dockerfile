@@ -1,7 +1,7 @@
 FROM openjdk:8-jdk-alpine
 MAINTAINER Caner Aydogan "contact@caner.com"
 
-EXPOSE 8080
+EXPOSE 8081
 WORKDIR /usr/local/bin/
 
 # for docker build
