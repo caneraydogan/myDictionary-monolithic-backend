@@ -6,13 +6,13 @@ services:
     depends_on:
       - postgres
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/dictionary
       - SPRING_DATASOURCE_USERNAME=dictionary
       - SPRING_DATASOURCE_PASSWORD=dictionarypass
       - SPRING_JPA_HIBERNATE_DDL_AUTO=none
-      - server.port=8080
+      - server.port=8081
       - spring.application.name=myDictionary
 
 
